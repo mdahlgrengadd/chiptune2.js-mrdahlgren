@@ -1,4 +1,7 @@
-# Chiptune.js
+# Chiptune.js (mrdahlgren fork)
+
+This fork is just a super minor tweak to replace stereo with quadraphonic rendering for use with Resonance Audio
+
 #### Version 2
 
 This is a javascript library that can play module music files. It is based on the [libopenmpt](https://lib.openmpt.org/libopenmpt) C/C++ library. To translate libopenmpt into Javascript [emscripten](https://github.com/kripken/emscripten) was used. For audio output inside the browser WebAudio API is used.
