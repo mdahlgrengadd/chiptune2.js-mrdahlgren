@@ -28,7 +28,7 @@ If you prefer to compile `libopenmpt.js` yourself (to save space or make custom 
  
 ## Demo
 
-See it in action [here](https://deskjet.github.io/chiptune2.js/).
+See it in action [here](https://mdahlgrengadd.github.io/chiptune2.js-mrdahlgren/).
 
 Just drop a module (e.g. from [modarchive.org](https://modarchive.org)) on the demo page and enjoy.
 
