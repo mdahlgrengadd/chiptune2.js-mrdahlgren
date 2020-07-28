@@ -168,7 +168,7 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
   // TODO error checking in this whole function
 
   var maxFramesPerChunk = 4096;
-  var processNode = this.context.createScriptProcessor(2048, 0, 2);
+  var processNode = this.context.createScriptProcessor(2048, 0, 4); // quad additions
   processNode.config = config;
   processNode.player = this;
   var byteArray = new Int8Array(buffer);
@@ -178,6 +178,9 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
   processNode.paused = false;
   processNode.leftBufferPtr  = libopenmpt._malloc(4 * maxFramesPerChunk);
   processNode.rightBufferPtr = libopenmpt._malloc(4 * maxFramesPerChunk);
+  //quad additions
+  processNode.leftBackBufferPtr  = libopenmpt._malloc(4 * maxFramesPerChunk);
+  processNode.righBacktBufferPtr = libopenmpt._malloc(4 * maxFramesPerChunk);
   processNode.cleanup = function() {
     if (this.modulePtr != 0) {
       libopenmpt._openmpt_module_destroy(this.modulePtr);
@@ -190,6 +193,15 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
     if (this.rightBufferPtr != 0) {
       libopenmpt._free(this.rightBufferPtr);
       this.rightBufferPtr = 0;
+    }
+    //quad additions
+    if (this.leftBackBufferPtr != 0) {
+      libopenmpt._free(this.leftBackBufferPtr);
+      this.leftBackBufferPtr = 0;
+    }
+    if (this.rightBackBufferPtr != 0) {
+      libopenmpt._free(this.rightBackBufferPtr);
+      this.rightBackBufferPtr = 0;
     }
   }
   processNode.stop = function() {
@@ -208,6 +220,9 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
   processNode.onaudioprocess = function(e) {
     var outputL = e.outputBuffer.getChannelData(0);
     var outputR = e.outputBuffer.getChannelData(1);
+    // quad additions
+    var outputLB = e.outputBuffer.getChannelData(2);
+    var outputRB = e.outputBuffer.getChannelData(3);
     var framesToRender = outputL.length;
     if (this.ModulePtr == 0) {
       for (var i = 0; i < framesToRender; ++i) {
@@ -230,7 +245,7 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
     var error = false;
     while (framesToRender > 0) {
       var framesPerChunk = Math.min(framesToRender, maxFramesPerChunk);
-      var actualFramesPerChunk = libopenmpt._openmpt_module_read_float_stereo(this.modulePtr, this.context.sampleRate, framesPerChunk, this.leftBufferPtr, this.rightBufferPtr);
+      var actualFramesPerChunk = libopenmpt._openmpt_module_read_float_quad(this.modulePtr, this.context.sampleRate, framesPerChunk, this.leftBufferPtr, this.rightBufferPtr, this.leftBackBufferPtr, this.rightBackBufferPtr); // quad additions
       if (actualFramesPerChunk == 0) {
         ended = true;
         // modulePtr will be 0 on openmpt: error: openmpt_module_read_float_stereo: ERROR: module * not valid or other openmpt error
@@ -238,13 +253,22 @@ ChiptuneJsPlayer.prototype.createLibopenmptNode = function(buffer, config) {
       }
       var rawAudioLeft = libopenmpt.HEAPF32.subarray(this.leftBufferPtr / 4, this.leftBufferPtr / 4 + actualFramesPerChunk);
       var rawAudioRight = libopenmpt.HEAPF32.subarray(this.rightBufferPtr / 4, this.rightBufferPtr / 4 + actualFramesPerChunk);
+      // quad additions
+      var rawAudioBackLeft = libopenmpt.HEAPF32.subarray(this.leftRightBufferPtr / 4, this.leftRightBufferPtr / 4 + actualFramesPerChunk);
+      var rawAudioBackRight = libopenmpt.HEAPF32.subarray(this.rightRightBufferPtr / 4, this.rightRightBufferPtr / 4 + actualFramesPerChunk);
       for (var i = 0; i < actualFramesPerChunk; ++i) {
         outputL[framesRendered + i] = rawAudioLeft[i];
         outputR[framesRendered + i] = rawAudioRight[i];
+        //quad additions
+        outputLB[framesRendered + i] = rawAudioBackLeft[i];
+        outputRB[framesRendered + i] = rawAudioBackRight[i];
       }
       for (var i = actualFramesPerChunk; i < framesPerChunk; ++i) {
         outputL[framesRendered + i] = 0;
         outputR[framesRendered + i] = 0;
+        //quad additions
+        outputLB[framesRendered + i] = 0;
+        outputRB[framesRendered + i] = 0;
       }
       framesToRender -= framesPerChunk;
       framesRendered += framesPerChunk;
